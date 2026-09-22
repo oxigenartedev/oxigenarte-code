@@ -1,50 +1,16 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { loginAction } from "./actions";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const form = new FormData(event.currentTarget);
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: String(form.get("email") ?? ""),
-          password: String(form.get("password") ?? ""),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        setError(data?.error || "No se pudo iniciar sesión.");
-        return;
-      }
-
-      router.push(searchParams.get("from") || "/cuenta");
-      router.refresh();
-    } catch {
-      setError("Ocurrió un error al conectar con el servidor.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [state, action, pending] = useActionState(loginAction, null);
 
   return (
-    <form className="auth-form" onSubmit={onSubmit}>
+    <form className="auth-form" action={action}>
+      <input type="hidden" name="from" value={searchParams.get("from") || "/cuenta"} />
       <label>
         Correo electrónico
         <input
@@ -65,9 +31,9 @@ export function LoginForm() {
           required
         />
       </label>
-      {error ? <p className="auth-error">{error}</p> : null}
-      <button type="submit" disabled={loading}>
-        {loading ? "Ingresando..." : "Iniciar sesión"}
+      {state?.error ? <p className="auth-error">{state.error}</p> : null}
+      <button type="submit" disabled={pending}>
+        {pending ? "Ingresando..." : "Iniciar sesión"}
       </button>
     </form>
   );

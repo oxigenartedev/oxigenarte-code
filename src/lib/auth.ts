@@ -1,77 +1,54 @@
-import { cookies } from "next/headers";
-import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export const AUTH_COOKIE = "oxigenarte_token";
-export const AUTH_MAX_AGE = 60 * 60 * 24 * 7;
+export type UserRole = "user" | "admin";
 
 export type AuthSession = {
+  id: string;
   email: string;
   name: string;
+  role: UserRole;
 };
 
-type TokenPayload = JWTPayload & AuthSession;
-
-function getSecret() {
-  const secret = process.env.JWT_SECRET;
-
-  if (!secret) {
-    throw new Error("Falta la variable JWT_SECRET");
-  }
-
-  return new TextEncoder().encode(secret);
-}
-
-export function getAuthCookieOptions() {
-  return {
-    name: AUTH_COOKIE,
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: AUTH_MAX_AGE,
-  };
-}
-
-export async function signAuthToken(session: AuthSession) {
-  return new SignJWT(session)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${AUTH_MAX_AGE}s`)
-    .sign(getSecret());
-}
-
-export async function verifyAuthToken(token: string): Promise<AuthSession | null> {
-  try {
-    const { payload } = await jwtVerify<TokenPayload>(token, getSecret());
-
-    if (!payload.email) {
-      return null;
-    }
-
-    return {
-      email: payload.email,
-      name: payload.name || payload.email,
-    };
-  } catch {
-    return null;
-  }
+function readRole(value: unknown): UserRole {
+  return value === "admin" ? "admin" : "user";
 }
 
 export async function getSession(): Promise<AuthSession | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE)?.value;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!token) {
+  if (!user?.email) {
     return null;
   }
 
-  return verifyAuthToken(token);
+  const metadataRole = readRole(user.app_metadata?.role);
+  const metadataName =
+    typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name
+      ? user.user_metadata.full_name
+      : user.email;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role, email")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return {
+    id: user.id,
+    email: profile?.email || user.email,
+    name: profile?.full_name || metadataName,
+    role: profile?.role ? readRole(profile.role) : metadataRole,
+  };
 }
 
-export function getDemoCredentials() {
-  return {
-    email: process.env.AUTH_EMAIL ?? "admin@oxigenarte.com.ve",
-    password: process.env.AUTH_PASSWORD ?? "oxigenarte123",
-    name: process.env.AUTH_NAME ?? "Administrador",
-  };
+export async function requireAdmin() {
+  const session = await getSession();
+
+  if (!session || session.role !== "admin") {
+    return null;
+  }
+
+  return session;
 }

@@ -1059,8 +1059,10 @@ p {
 
 .auth-page {
   min-height: 620px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
   padding: 40px 24px 90px;
 }
 
@@ -1094,7 +1096,8 @@ p {
   font-size: 14px;
 }
 
-.auth-form input {
+.auth-form input,
+.auth-form select {
   min-height: 44px;
   border: 0;
   border-bottom: 1px solid #a9bdbd;
@@ -1124,6 +1127,33 @@ p {
 
 .auth-error {
   color: #9b3b3b;
+  font-size: 14px;
+}
+
+.auth-success {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.admin-panel h2 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.user-list {
+  margin-top: 28px;
+  display: grid;
+  gap: 10px;
+}
+
+.user-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #dbe4e1;
   font-size: 14px;
 }
 

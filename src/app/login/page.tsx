@@ -18,10 +18,6 @@ export default function LoginPage() {
           <Suspense fallback={<p>Cargando formulario...</p>}>
             <LoginForm />
           </Suspense>
-          <p className="auth-hint">
-            Acceso de prueba: <strong>admin@oxigenarte.com.ve</strong> /{" "}
-            <strong>oxigenarte123</strong>
-          </p>
         </div>
       </section>
       <SiteFooter />
